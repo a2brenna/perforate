@@ -179,66 +179,63 @@ int main(int argc, char *argv[]){
         }
 
         if(pfd.revents & POLLRDNORM){
-            while(true){
-                const auto rand_index = distrib(gen);
-                const auto rand_path = index[rand_index];
+            const auto rand_index = distrib(gen);
+            const auto rand_path = index[rand_index];
 
-                const auto start_open = std::chrono::high_resolution_clock::now();
-                const auto fd = open(rand_path, O_RDONLY);
-                const auto open_duration = std::chrono::high_resolution_clock::now() - start_open;
+            const auto start_open = std::chrono::high_resolution_clock::now();
+            const auto fd = open(rand_path, O_RDONLY);
+            const auto open_duration = std::chrono::high_resolution_clock::now() - start_open;
 
-                if(fd < 0){
-                    continue;
-                }
+            if(fd < 0){
+                continue;
+            }
 
-                char buff[4096];
-                const auto start_read = std::chrono::high_resolution_clock::now();
-                const auto bytes_read = read(fd, buff, sizeof(buff));
-                const auto read_duration = std::chrono::high_resolution_clock::now() - start_read;
+            char buff[4096];
+            const auto start_read = std::chrono::high_resolution_clock::now();
+            const auto bytes_read = read(fd, buff, sizeof(buff));
+            const auto read_duration = std::chrono::high_resolution_clock::now() - start_read;
 
-                close(fd);
+            close(fd);
 
-                if(bytes_read < 0){
-                    continue;
-                }
+            if(bytes_read < 0){
+                continue;
+            }
 
-                const std::vector<int> clients = [](const auto incoming_fd){
-                    std::vector<int> clients;
-                    while(true){
-                        const auto client = accept4(incoming_fd, nullptr, nullptr, SOCK_NONBLOCK);
-                        if(client < 0){
-                            if(errno == EAGAIN || errno == EWOULDBLOCK){
-                                break;
-                            }
-                            else{
-                                std::cerr << "Fatal: Could not accept incoming connection: " << errno << std::endl;
-                                exit(EXIT_FAILURE);
-                            }
+            const std::vector<int> clients = [](const auto incoming_fd){
+                std::vector<int> clients;
+                while(true){
+                    const auto client = accept4(incoming_fd, nullptr, nullptr, SOCK_NONBLOCK);
+                    if(client < 0){
+                        if(errno == EAGAIN || errno == EWOULDBLOCK){
+                            break;
                         }
-
-                        clients.push_back(client);
+                        else{
+                            std::cerr << "Fatal: Could not accept incoming connection: " << errno << std::endl;
+                            exit(EXIT_FAILURE);
+                        }
                     }
-                    return clients;
-                }(incoming_fd);
 
-                const std::string data =
-                    "# HELP perforated_open_latency Time in nanoseconds to open a file\n"
-                    "# TYPE perforated_open_latency gauge\n"
-                    "perforated_open_latency " + std::to_string(open_duration.count()) + "\n"
-                    "# HELP perforated_read_latency Time in nanoseconds to read 4096 bytes\n"
-                    "# TYPE perforated_read_latency gauge\n"
-                    "perforated_read_latency " + std::to_string(read_duration.count()) + "\n";
-
-                const std::string response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain; version=0.0.4\r\n"
-                    "Content-Length: " + std::to_string(data.size()) + "\r\n\r\n" + data;
-
-                for(const auto &c: clients){
-                    write(c, response.c_str(), response.size());
-                    close(c);
+                    clients.push_back(client);
                 }
+                return clients;
+            }(incoming_fd);
 
+            const std::string data =
+                "# HELP perforated_open_latency Time in nanoseconds to open a file\n"
+                "# TYPE perforated_open_latency gauge\n"
+                "perforated_open_latency " + std::to_string(open_duration.count()) + "\n"
+                "# HELP perforated_read_latency Time in nanoseconds to read 4096 bytes\n"
+                "# TYPE perforated_read_latency gauge\n"
+                "perforated_read_latency " + std::to_string(read_duration.count()) + "\n";
+
+            const std::string response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain; version=0.0.4\r\n"
+                "Content-Length: " + std::to_string(data.size()) + "\r\n\r\n" + data;
+
+            for(const auto &c: clients){
+                write(c, response.c_str(), response.size());
+                close(c);
             }
         }
         else{
