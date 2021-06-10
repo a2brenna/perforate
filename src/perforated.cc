@@ -69,7 +69,7 @@ int main(int argc, char *argv[]){
         }
 
         const auto addr = address.substr(0, colon_pos);
-        const auto port = address.substr(colon_pos + 1, address.size());
+        const auto port = address.substr(colon_pos + 1);
 
         struct addrinfo *r = nullptr;
 

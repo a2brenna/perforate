@@ -17,7 +17,7 @@ all: perforated
 
 install: all
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
-	install -m 755 perforated ${DESTDIR}/bin
+	install -m 755 perforated ${DESTDIR}/${PREFIX}/bin
 
 perforated: src/perforated.cc
 	${CXX} ${CXXFLAGS} -o $@ $^
