@@ -15,7 +15,7 @@
 #include <chrono>
 
 const char *usage =
-"Usage: perforated [-hd] -a ADDRESS -p PATHS\n\n"
+"Usage: perforated [-hd] -l ADDRESS -p PATHS\n\n"
 "Perforated exposes the latency of opening and reading data from a random set\n"
 "of files as a Prometheus HTTP endpoint (at ADDRESS).  It does this by waiting\n"
 "for incoming connections, selecting a random file from the paths in PATHS,\n"
@@ -34,18 +34,15 @@ int main(int argc, char *argv[]){
     std::string pathfile;
 
     int opt = -1;
-    while((opt = getopt(argc, argv, "dha:p:")) != -1){
+    while((opt = getopt(argc, argv, "dhl:p:")) != -1){
         switch(opt) {
-            case -1:
-                std::cerr << usage << std::endl;
-                exit(EXIT_FAILURE);
             case 'd':
                 daemonize = true;
                 break;
             case 'h':
                 help = true;
                 break;
-            case 'a':
+            case 'l':
                 address = optarg;
                 break;
             case 'p':
