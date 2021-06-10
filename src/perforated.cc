@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
 
         const bool bound = [](const struct addrinfo *r, const int &fd){
             for(auto s = r; s != nullptr; s = s->ai_next){
-                    const int b = bind(fd, s->ai_addr, s->ai_addrlen);
+                const int b = bind(fd, s->ai_addr, s->ai_addrlen);
                 if (b == 0) {
                     return true;
                 }
