@@ -1,0 +1,238 @@
+#include <iostream>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <random>
+#include "poll.h"
+#include <chrono>
+
+const char *usage =
+"Usage: perforated [-hd] -a ADDRESS -i INDEX\n\n"
+"   ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999)\n"
+"   INDEX is the path to a file containing a list of absolute PATHS, seperated by\n"
+"       '\0' (similar to the output of \"find /directory -type f ! -size 0 | tr '\n' '\0'\")"
+;
+
+int main(int argc, char *argv[]){
+
+    bool daemonize = false;
+    bool help = false;
+    std::string address;
+    std::string pathfile;
+
+    int opt = -1;
+    while((opt = getopt(argc, argv, "dha:i:")) != -1){
+        switch(opt) {
+            case -1:
+                std::cerr << usage << std::endl;
+                exit(EXIT_FAILURE);
+            case 'd':
+                daemonize = true;
+                break;
+            case 'h':
+                help = true;
+                break;
+            case 'a':
+                address = optarg;
+                break;
+            case 'i':
+                pathfile = optarg;
+                break;
+        }
+    }
+
+    if(help){
+        std::cerr << usage << std::endl;
+        exit(EXIT_SUCCESS);
+    }
+
+    if(address.empty() || pathfile.empty()){
+        std::cerr << usage << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    const int incoming_fd = [](const auto &address){
+        const auto colon_pos = address.find(':');
+        if(colon_pos == std::string::npos){
+            std::cerr << usage << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        const auto addr = address.substr(0, colon_pos);
+        const auto port = address.substr(colon_pos + 1, address.size());
+
+        struct addrinfo *r = nullptr;
+
+        const int addrinfo_status = getaddrinfo(addr.c_str(), port.c_str(), nullptr, &r);
+        if(addrinfo_status != 0){
+            std::cerr << "Fatal: Could not listen at: " << address << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        const int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if(fd < 0){
+            std::cerr << "Fatal: Could not open socket" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        //TODO: get rid of 'yes'
+        const int yes = 1;
+        const auto sa = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+        const auto sb = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(int));
+
+        if((sa != 0) || (sb != 0)){
+            std::cerr << "Fatal: Failed to set socket options" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        const bool bound = [](const struct addrinfo *r, const int &fd){
+            for(auto s = r; s != nullptr; s = s->ai_next){
+                    const int b = bind(fd, s->ai_addr, s->ai_addrlen);
+                if (b == 0) {
+                    return true;
+                }
+                else{
+                    continue;
+                }
+            }
+            return false;
+        }(r, fd);
+
+        if(!bound){
+            std::cerr << "Fatal: Could not bind to socket" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        const int listening = listen(fd, SOMAXCONN);
+        if(listening < 0){
+            std::cerr << "Fatal: Could not listen on socket" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        freeaddrinfo(r);
+        return fd;
+    }(address);
+
+    const auto [paths, paths_length] = [](const auto &pathfile) -> std::pair<char *, size_t> {
+        //TODO: rename index
+        const int index_fd = open(pathfile.c_str(), O_RDONLY);
+        if(index_fd < 0){
+            std::cerr << "Fatal: Could not open index file" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        struct stat statbuf;
+        const int s = fstat(index_fd, &statbuf);
+        if(s < 0){
+            std::cerr << "Fatal: Could not stat index file" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        char *index = static_cast<char *>(mmap(nullptr, statbuf.st_size, PROT_READ, MAP_PRIVATE, index_fd, 0));
+        if(!index){
+            std::cerr << "Fatal: Could not mmap" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        return std::make_pair(index, statbuf.st_size);
+    }(pathfile);
+
+    const std::vector<char *> index = [](const auto paths, const auto paths_length){
+        std::vector<char *> index;
+        for(char *i = paths; i < paths + paths_length; ){
+            index.push_back(i);
+            i = strchrnul(i, '\0') + 1;
+        }
+        return index;
+    }(paths, paths_length);
+
+    if(daemonize){
+        const auto d = daemon(0, 0);
+        if(d != 0){
+            std::cerr << "Fatal: Failed to daemonize" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, index.size() - 1);
+
+    while(true){
+        struct pollfd pfd;
+        pfd.fd = incoming_fd;
+        pfd.events = POLLRDNORM;
+
+        const auto p = poll(&pfd, 1, -1);
+        if(p < 0){
+            std::cerr << "Fatal: Error polling" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        if(pfd.revents & POLLRDNORM){
+            while(true){
+                const auto rand_index = distrib(gen);
+                const auto rand_path = index[rand_index];
+
+                const auto start_open = std::chrono::high_resolution_clock::now();
+                const auto fd = open(rand_path, O_RDONLY);
+                const auto open_duration = std::chrono::high_resolution_clock::now() - start_open;
+
+                if(fd < 0){
+                    continue;
+                }
+
+                char buff[4096];
+                const auto start_read = std::chrono::high_resolution_clock::now();
+                const auto bytes_read = read(fd, buff, sizeof(buff));
+                const auto read_duration = std::chrono::high_resolution_clock::now() - start_read;
+
+                close(fd);
+
+                if(bytes_read < 0){
+                    continue;
+                }
+
+                const std::vector<int> clients = [](const auto incoming_fd){
+                    std::vector<int> clients;
+                    while(true){
+                        const auto client = accept4(incoming_fd, nullptr, nullptr, SOCK_NONBLOCK);
+                        if(client < 0){
+                            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                                break;
+                            }
+                            else{
+                                std::cerr << "Fatal: Could not accept incoming connection: " << errno << std::endl;
+                                exit(EXIT_FAILURE);
+                            }
+                        }
+
+                        clients.push_back(client);
+                    }
+                    return clients;
+                }(incoming_fd);
+
+                const std::string response = std::to_string(open_duration.count()) + "\n" + std::to_string(read_duration.count()) + "\n";
+
+                for(const auto &c: clients){
+                    write(c, response.c_str(), response.size());
+                    close(c);
+                }
+
+            }
+        }
+        else{
+            break;
+        }
+    }
+
+    exit(EXIT_SUCCESS);
+}
