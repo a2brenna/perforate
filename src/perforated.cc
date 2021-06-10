@@ -85,7 +85,6 @@ int main(int argc, char *argv[]){
             exit(EXIT_FAILURE);
         }
 
-        //TODO: get rid of 'yes'
         const int yes = 1;
         const auto sa = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
         const auto sb = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(int));
