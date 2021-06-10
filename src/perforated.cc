@@ -224,7 +224,12 @@ int main(int argc, char *argv[]){
                     return clients;
                 }(incoming_fd);
 
-                const std::string response = std::to_string(open_duration.count()) + "\n" + std::to_string(read_duration.count()) + "\n";
+                const std::string data = std::to_string(open_duration.count()) + "\n" + std::to_string(read_duration.count()) + "\n";
+
+                const std::string response =
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: text/plain; version=0.0.4\r\n"
+                    "Content-Length: " + std::to_string(data.size()) + "\r\n\r\n" + data;
 
                 for(const auto &c: clients){
                     write(c, response.c_str(), response.size());
