@@ -127,27 +127,26 @@ int main(int argc, char *argv[]){
     }(address);
 
     const auto [paths, paths_length] = [](const auto &pathfile) -> std::pair<char *, size_t> {
-        //TODO: rename index
-        const int index_fd = open(pathfile.c_str(), O_RDONLY);
-        if(index_fd < 0){
-            std::cerr << "Fatal: Could not open index file" << std::endl;
+        const int paths_fd = open(pathfile.c_str(), O_RDONLY);
+        if(paths_fd < 0){
+            std::cerr << "Fatal: Could not open paths file" << std::endl;
             exit(EXIT_FAILURE);
         }
 
         struct stat statbuf;
-        const int s = fstat(index_fd, &statbuf);
+        const int s = fstat(paths_fd, &statbuf);
         if(s < 0){
-            std::cerr << "Fatal: Could not stat index file" << std::endl;
+            std::cerr << "Fatal: Could not stat paths file" << std::endl;
             exit(EXIT_FAILURE);
         }
 
-        char *index = static_cast<char *>(mmap(nullptr, statbuf.st_size, PROT_READ, MAP_PRIVATE, index_fd, 0));
-        if(!index){
+        char *paths = static_cast<char *>(mmap(nullptr, statbuf.st_size, PROT_READ, MAP_PRIVATE, paths_fd, 0));
+        if(!paths){
             std::cerr << "Fatal: Could not mmap" << std::endl;
             exit(EXIT_FAILURE);
         }
 
-        return std::make_pair(index, statbuf.st_size);
+        return std::make_pair(paths, statbuf.st_size);
     }(pathfile);
 
     const std::vector<char *> index = [](const auto paths, const auto paths_length){
