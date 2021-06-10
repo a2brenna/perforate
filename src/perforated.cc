@@ -15,10 +15,15 @@
 #include <chrono>
 
 const char *usage =
-"Usage: perforated [-hd] -a ADDRESS -i INDEX\n\n"
-"   ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999)\n"
-"   INDEX is the path to a file containing a list of absolute PATHS, seperated by\n"
-"       '\0' (similar to the output of \"find /directory -type f ! -size 0 | tr '\n' '\0'\")"
+"Usage: perforated [-hd] -a ADDRESS -p PATHS\n\n"
+"Perforated exposes the latency of opening and reading data from a random set\n"
+"of files as a Prometheus HTTP endpoint (at ADDRESS).  It does this by waiting\n"
+"for incoming connections, selecting a random file from the paths in PATHS,\n"
+"opening that file, reading the first 4096 bytes and finally returning the\n"
+"duration of those operations in nanoseconds to its clients.\n\n"
+"ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999). PATHS is a file\n"
+"containing null-terminated absolute paths of the files used for sampling. You\n"
+"can construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'\")"
 ;
 
 int main(int argc, char *argv[]){
@@ -29,7 +34,7 @@ int main(int argc, char *argv[]){
     std::string pathfile;
 
     int opt = -1;
-    while((opt = getopt(argc, argv, "dha:i:")) != -1){
+    while((opt = getopt(argc, argv, "dha:p:")) != -1){
         switch(opt) {
             case -1:
                 std::cerr << usage << std::endl;
@@ -43,7 +48,7 @@ int main(int argc, char *argv[]){
             case 'a':
                 address = optarg;
                 break;
-            case 'i':
+            case 'p':
                 pathfile = optarg;
                 break;
         }
