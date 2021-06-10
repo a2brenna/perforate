@@ -1,0 +1,13 @@
+[Unit]
+Description=Perforated service
+Require=network.target
+After=network.target
+Before=multi-user.target
+
+[Service]
+Type=forking
+RuntimeDirectory=perforated
+ExecStart=/usr/local/bin/perforated -d -l 127.0.0.1:9200 -p /var/lib/perforated/paths
+
+[Install]
+WantedBy=multi-user.target
