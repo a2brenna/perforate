@@ -224,7 +224,13 @@ int main(int argc, char *argv[]){
                     return clients;
                 }(incoming_fd);
 
-                const std::string data = std::to_string(open_duration.count()) + "\n" + std::to_string(read_duration.count()) + "\n";
+                const std::string data =
+                    "# HELP perforated_open_latency Time in nanoseconds to open a file\n"
+                    "# TYPE perforated_open_latency gauge\n"
+                    "perforated_open_latency " + std::to_string(open_duration.count()) + "\n"
+                    "# HELP perforated_read_latency Time in nanoseconds to read 4096 bytes\n"
+                    "# TYPE perforated_read_latency gauge\n"
+                    "perforated_read_latency " + std::to_string(read_duration.count()) + "\n";
 
                 const std::string response =
                     "HTTP/1.1 200 OK\r\n"
