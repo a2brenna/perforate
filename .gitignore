@@ -1,0 +1,14 @@
+*.so
+*.o
+*.d
+*.a
+*.o
+*.gcno
+*.gcov
+*.gcda
+src/*.pb.h
+src/*.pb.cc
+perf.data
+perf.data.old
+core
+perforated
