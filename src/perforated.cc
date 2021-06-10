@@ -154,6 +154,15 @@ int main(int argc, char *argv[]){
         return index;
     }(paths, paths_length);
 
+    if(index.size() == 0){
+        std::cerr << "Fatal: Index is too small, paths file is malformed or empty" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, index.size() - 1);
+
     if(daemonize){
         const auto d = daemon(0, 0);
         if(d != 0){
@@ -161,10 +170,6 @@ int main(int argc, char *argv[]){
             exit(EXIT_FAILURE);
         }
     }
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, index.size() - 1);
 
     while(true){
         struct pollfd pfd;
