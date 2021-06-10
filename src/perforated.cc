@@ -23,7 +23,7 @@ const char *usage =
 "duration of those operations in nanoseconds to its clients.\n\n"
 "ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999). PATHS is a file\n"
 "containing null-terminated absolute paths of the files used for sampling. You\n"
-"can construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'\")"
+"construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'."
 ;
 
 int main(int argc, char *argv[]){
