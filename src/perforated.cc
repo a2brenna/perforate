@@ -203,7 +203,7 @@ int main(int argc, char *argv[]){
 
                     close(fd);
 
-                    if(bytes_read < 0){
+                    if(bytes_read <= 0){
                         continue;
                     }
 
