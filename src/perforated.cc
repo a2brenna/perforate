@@ -183,27 +183,33 @@ int main(int argc, char *argv[]){
         }
 
         if(pfd.revents & POLLRDNORM){
-            const auto rand_index = distrib(gen);
-            const auto rand_path = index[rand_index];
+            const auto [open_duration, read_duration] = [](const auto &index, auto &distrib, auto &gen){
+                while(true){
+                    const auto rand_index = distrib(gen);
+                    const auto rand_path = index[rand_index];
 
-            const auto start_open = std::chrono::high_resolution_clock::now();
-            const auto fd = open(rand_path, O_RDONLY);
-            const auto open_duration = std::chrono::high_resolution_clock::now() - start_open;
+                    const auto start_open = std::chrono::high_resolution_clock::now();
+                    const auto fd = open(rand_path, O_RDONLY);
+                    const auto open_duration = std::chrono::high_resolution_clock::now() - start_open;
 
-            if(fd < 0){
-                continue;
-            }
+                    if(fd < 0){
+                        continue;
+                    }
 
-            char buff[4096];
-            const auto start_read = std::chrono::high_resolution_clock::now();
-            const auto bytes_read = read(fd, buff, sizeof(buff));
-            const auto read_duration = std::chrono::high_resolution_clock::now() - start_read;
+                    char buff[4096];
+                    const auto start_read = std::chrono::high_resolution_clock::now();
+                    const auto bytes_read = read(fd, buff, sizeof(buff));
+                    const auto read_duration = std::chrono::high_resolution_clock::now() - start_read;
 
-            close(fd);
+                    close(fd);
 
-            if(bytes_read < 0){
-                continue;
-            }
+                    if(bytes_read < 0){
+                        continue;
+                    }
+
+                    return std::make_pair(open_duration, read_duration);
+                }
+            }(index, distrib, gen);
 
             const std::vector<int> clients = [](const auto incoming_fd){
                 std::vector<int> clients;
