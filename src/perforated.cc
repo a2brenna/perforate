@@ -248,7 +248,8 @@ int main(int argc, char *argv[]){
                 "Content-Length: " + std::to_string(data.size()) + "\r\n\r\n" + data;
 
             for(const auto &c: clients){
-                write(c, response.c_str(), response.size());
+                const auto w = write(c, response.c_str(), response.size());
+                (void)w;
                 close(c);
             }
         }
