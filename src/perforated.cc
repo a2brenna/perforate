@@ -32,9 +32,10 @@ int main(int argc, char *argv[]){
     bool help = false;
     std::string address;
     std::string pathfile;
+    std::string tags;
 
     int opt = -1;
-    while((opt = getopt(argc, argv, "dhl:p:")) != -1){
+    while((opt = getopt(argc, argv, "dhl:p:t:")) != -1){
         switch(opt) {
             case 'd':
                 daemonize = true;
@@ -47,6 +48,9 @@ int main(int argc, char *argv[]){
                 break;
             case 'p':
                 pathfile = optarg;
+                break;
+            case 't':
+                tags = optarg;
                 break;
         }
     }
@@ -233,10 +237,10 @@ int main(int argc, char *argv[]){
             const std::string data =
                 "# HELP perforated_open_latency Time in nanoseconds to open a file\n"
                 "# TYPE perforated_open_latency gauge\n"
-                "perforated_open_latency " + std::to_string(open_duration.count()) + "\n"
+                "perforated_open_latency" + tags + " " + std::to_string(open_duration.count()) + "\n"
                 "# HELP perforated_read_latency Time in nanoseconds to read 4096 bytes\n"
                 "# TYPE perforated_read_latency gauge\n"
-                "perforated_read_latency " + std::to_string(read_duration.count()) + "\n";
+                "perforated_read_latency" + tags + " " + std::to_string(read_duration.count()) + "\n";
 
             const std::string response =
                 "HTTP/1.1 200 OK\r\n"
