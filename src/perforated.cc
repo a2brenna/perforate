@@ -16,15 +16,18 @@
 #include <chrono>
 
 const char *usage =
-"Usage: perforated [-hd] -l ADDRESS -p PATHS\n\n"
-"Perforated exposes the latency of opening and reading data from a random set\n"
-"of files as a Prometheus HTTP endpoint (at ADDRESS).  It does this by waiting\n"
-"for incoming connections, selecting a random file from the paths in PATHS,\n"
-"opening that file, reading the first 4096 bytes and finally returning the\n"
-"duration of those operations in nanoseconds to its clients.\n\n"
-"ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999). PATHS is a file\n"
-"containing null-terminated absolute paths of the files used for sampling. You\n"
-"construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'."
+"Usage: perforated [-hd] -l ADDRESS -p PATHS\
+\
+Perforated exposes the latency of various filesystem operationsas a Prometheus\
+HTTP endpoint (at ADDRESS).  It does this by waiting for incoming connections,\
+selecting a random file from the paths in PATHS, performing an fstatat,\
+selecting a second random file from the paths in PATHS, opening that file,\
+reading the first 4096 bytes and finally returning the duration of these three\
+operations in nanoseconds to its clients.\
+\
+ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999). PATHS is a file\
+containing null-terminated absolute paths of the files used for sampling. You\
+construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'."
 ;
 
 int main(int argc, char *argv[]){
