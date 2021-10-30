@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <string>
@@ -215,6 +216,57 @@ int main(int argc, char *argv[]){
                 }
             }(index, distrib, gen);
 
+            const auto stat_duration = [](const auto &index, auto &distrib, auto &gen){
+                while(true){
+                    const auto rand_index = distrib(gen);
+                    const auto rand_path = index[rand_index];
+
+                    const size_t dir_path_length = [](const auto &rand_path) -> size_t {
+                        size_t dir_path_length = 0;
+                        for(size_t i = 0; i < 4096; i++){
+                            if(*(rand_path + i) == '\0'){
+                                return dir_path_length;
+                            }
+                            else if(*(rand_path + i) == '/'){
+                                dir_path_length = i + 1;
+                            }
+                        }
+                        return 0;
+                    }(rand_path);
+
+                    if(dir_path_length <= 0 || dir_path_length >= 4096){
+                        continue;
+                    }
+
+                    char dir_path[4096];
+                    memcpy(dir_path, rand_path, dir_path_length);
+                    dir_path[dir_path_length] = '\0';
+
+                    const auto dir = opendir(dir_path);
+
+                    if(!dir){
+                        continue;
+                    }
+
+                    const auto fd = dirfd(dir);
+
+                    if(fd < 0){
+                        continue;
+                    }
+
+                    struct stat statbuf;
+                    const auto start_stat = std::chrono::high_resolution_clock::now();
+                    const auto s = fstatat(fd, rand_path + dir_path_length, &statbuf, AT_SYMLINK_NOFOLLOW);
+                    const auto stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
+
+                    if(s < 0){
+                        continue;
+                    }
+
+                    return stat_duration;
+                }
+            }(index, distrib, gen);
+
             const std::vector<int> clients = [](const auto incoming_fd){
                 std::vector<int> clients;
                 while(true){
@@ -240,7 +292,11 @@ int main(int argc, char *argv[]){
                 "perforated_open_latency" + tags + " " + std::to_string(open_duration.count()) + "\n"
                 "# HELP perforated_read_latency Time in nanoseconds to read 4096 bytes\n"
                 "# TYPE perforated_read_latency gauge\n"
-                "perforated_read_latency" + tags + " " + std::to_string(read_duration.count()) + "\n";
+                "perforated_read_latency" + tags + " " + std::to_string(read_duration.count()) + "\n"
+                "# HELP perforated_fstatat_latency Time in nanoseconds to fstatat a file\n"
+                "# TYPE perforated_fstatat_latency gauge\n"
+                "perforated_fstatat_latency" + tags + " " + std::to_string(stat_duration.count()) + "\n"
+                ;
 
             const std::string response =
                 "HTTP/1.1 200 OK\r\n"
