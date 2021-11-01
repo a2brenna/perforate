@@ -247,26 +247,21 @@ int main(int argc, char *argv[]){
 
                     const auto dir = opendir(dir_path);
 
-                    if(!dir){
-                        continue;
+                    if(dir){
+                        const auto fd = dirfd(dir);
+
+                        if(fd >= 0){
+                            struct stat statbuf;
+                            const auto start_stat = std::chrono::high_resolution_clock::now();
+                            const auto s = fstatat(fd, rand_path + dir_path_length, &statbuf, AT_SYMLINK_NOFOLLOW);
+                            const auto stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
+                            if(s >= 0){
+                                return stat_duration;
+                            }
+                        }
+
+                        closedir(dir);
                     }
-
-                    const auto fd = dirfd(dir);
-
-                    if(fd < 0){
-                        continue;
-                    }
-
-                    struct stat statbuf;
-                    const auto start_stat = std::chrono::high_resolution_clock::now();
-                    const auto s = fstatat(fd, rand_path + dir_path_length, &statbuf, AT_SYMLINK_NOFOLLOW);
-                    const auto stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
-
-                    if(s < 0){
-                        continue;
-                    }
-
-                    return stat_duration;
                 }
             }(index, distrib, gen);
 
