@@ -14,6 +14,7 @@
 #include <random>
 #include <poll.h>
 #include <chrono>
+#include <optional>
 
 const char *usage =
 "Usage: perforated [-hd] -l ADDRESS -p PATHS\
@@ -254,7 +255,10 @@ int main(int argc, char *argv[]){
                             struct stat statbuf;
                             const auto start_stat = std::chrono::high_resolution_clock::now();
                             const auto s = fstatat(fd, rand_path + dir_path_length, &statbuf, AT_SYMLINK_NOFOLLOW);
-                            stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
+                            const auto end_stat = std::chrono::high_resolution_clock::now();
+                            if(s == 0){
+                                stat_duration = end_stat - start_stat;
+                            }
                         }
                     }
                     closedir(dir); //also closes 'fd'
