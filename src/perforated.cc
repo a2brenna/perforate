@@ -245,22 +245,22 @@ int main(int argc, char *argv[]){
                     memcpy(dir_path, rand_path, dir_path_length);
                     dir_path[dir_path_length] = '\0';
 
-                    const auto dir = opendir(dir_path);
+                    std::optional<std::chrono::nanoseconds> stat_duration;
 
+                    const auto dir = opendir(dir_path);
                     if(dir){
                         const auto fd = dirfd(dir);
-
                         if(fd >= 0){
                             struct stat statbuf;
                             const auto start_stat = std::chrono::high_resolution_clock::now();
                             const auto s = fstatat(fd, rand_path + dir_path_length, &statbuf, AT_SYMLINK_NOFOLLOW);
-                            const auto stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
-                            if(s >= 0){
-                                return stat_duration;
-                            }
+                            stat_duration = std::chrono::high_resolution_clock::now() - start_stat;
                         }
+                    }
+                    closedir(dir); //also closes 'fd'
 
-                        closedir(dir);
+                    if(stat_duration.has_value()){
+                        return stat_duration.value();
                     }
                 }
             }(index, distrib, gen);
