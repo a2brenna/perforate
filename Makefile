@@ -20,7 +20,7 @@ install: all
 	install -m 755 perforated ${DESTDIR}/${PREFIX}/bin
 
 perforated: src/perforated.cc
-	${CXX} ${CXXFLAGS} -o $@ $^
+	${CXX} ${CXXFLAGS} -o $@ $^ -lpthread
 
 %.o: src/%.cc src/%.h
 	${CXX} ${CXXFLAGS} -c $< -o $@ -MT $@ -MMD -MP -MF $*.d
