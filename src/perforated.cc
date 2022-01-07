@@ -19,7 +19,7 @@
 const char *usage =
 "Usage: perforated [-hd] -l ADDRESS -p PATHS\
 \
-Perforated exposes the latency of various filesystem operationsas a Prometheus\
+Perforated exposes the latency of various filesystem operations as a Prometheus\
 HTTP endpoint (at ADDRESS).  It does this by waiting for incoming connections,\
 selecting a random file from the paths in PATHS, performing an fstatat,\
 selecting a second random file from the paths in PATHS, opening that file,\
