@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 #include <random>
-#include <poll.h>
 #include <chrono>
 #include <optional>
 #include <functional>
