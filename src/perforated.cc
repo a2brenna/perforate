@@ -17,6 +17,7 @@
 #include <optional>
 #include <functional>
 #include <thread>
+#include <atomic>
 
 const char *usage =
 "Usage: perforated [-hd] -l ADDRESS -p PATHS\
@@ -32,6 +33,8 @@ ADDRESS is of the form IP_ADDRESS:PORT (e.g. 127.0.0.1:9999). PATHS is a file\
 containing null-terminated absolute paths of the files used for sampling. You\
 construct that file using 'find /directory -type f ! -size 0 | tr '\\n' '\\0'."
 ;
+
+std::atomic<size_t> REQUESTS_IN_FLIGHT = 0;
 
 int main(int argc, char *argv[]){
 
@@ -281,6 +284,8 @@ int main(int argc, char *argv[]){
         (void)w;
         close(client_fd);
 
+	--REQUESTS_IN_FLIGHT;
+
         return;
     };
 
@@ -295,6 +300,11 @@ int main(int argc, char *argv[]){
                 exit(EXIT_FAILURE);
             }
         }
+
+	const size_t curr_requests_in_flight = ++REQUESTS_IN_FLIGHT;
+	if(curr_requests_in_flight > 1){
+		std::cerr << "Warning: " << curr_requests_in_flight << " requests in flight" << std::endl;
+	}
 
         const auto bound_handler = std::bind(client_handler, client_fd);
         auto handler_thread = std::thread(bound_handler);
